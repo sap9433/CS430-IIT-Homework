@@ -1,0 +1,578 @@
+		Problem Solving with State-Space Seaching
+
+
+Introduction: 
+
+In the this lecture as in the previous one, we will look at how to think about
+solving certain kinds of problems on computers, by thinking about finding their
+solutions as the process of searching through trees. In this lecture we will
+look at problem solving using "breadth-first search" and a new variant of
+"depth first search" (i.e, not pre-/in-post-order) called "best-first search".
+The queue and priority queue collections respectively play major roles in each
+of these search orders (which don't use recursion); recall that both implement
+the Collection interface (e.g., can add and remove values from each, and check
+whether each isEmpty).
+
+Again, no tree gets constructed explicitly (no new TreeNode() statements will
+appear in any code), but the order in which the nodes are examined can be
+nicely visualized as a tree, whose nodes are searched until a solution is found
+(or until the code discovers that no solution is possible).
+
+
+Water Jug Problems:
+
+To be concrete, we will start by describing a schema for Water Jug problems, to
+help us learn the right terminology. One example of a Water Jug problem is as
+follows.
+
+  We have three jugs (call them j1, j2, and j3) with capacities 3, 5, and 8
+  gallons respectively. At the start, j1 and j2 are empty and j3 is filled
+  (with 8 gallons). We can pour liquid from one jug into another according to
+  the following rules: once we start pouring, we must empty the jug we are
+  pouring FROM, except we can never overflow the jug we are pouring INTO (so we
+  stop either when the FROM jug is empty or the TO jug is filled, whichever
+  comes first). We want to discover a sequence of pouring operations (from
+  various jugs into other various jugs, according the pouring rules) such that
+  eventually j1 is empty and j2 and j3 each contain 4 gallons.
+
+So, the rules say that if we start pouring from j3 to j1, we must stop when
+j1 has 3 gallons (it cannot overflow) so j3 has 5 gallons remaining. If we then
+start pouring j1 into j2 we must pour all 3 gallons, so j1 will contain 0
+gallons and j2 will contain 3 gallons. If we then start pouring j3 into j2 we
+must stop when j2 has 5 gallons (it cannot overflow) so j3 has 3 gallons
+remaining.
+
+In this formulation of the Water Jugs problem, water is conserved: we can 
+neither pour water onto the ground (removing it from the system) or put water
+into a jug from the tap (adding it to the system). In other versions of this
+problem we can empty a jug onto the ground or fill a jug from the tap.
+
+Note: Students have been telling me for a few quarters that one of of the Die
+Hard movies involved a water jugs problem (2 jugs, 3 and 5, where the solution
+requires one jug with 4 gallons; this is a non-conserved problem: the water
+jugs are empty and can be filled from a tap and emptied on the ground). Here is
+a link to the the video:
+
+  https://www.youtube.com/watch?v=ozSF-7_Fwec&feature=youtube_gdata_player 
+
+
+General State-Space Search Problems:
+
+Now let's describe this problem as a general state-space search problem.
+
+First, the salient information about the current state of the problem is how
+many gallons of water each jug currently holds. We call such a description a
+STATE and can think of describing a state simply as a triple of numbers:
+(j1,j2,j3). So (2,4,2) represents the state where j1 contains 2 gallons, j2
+contains 4 gallons, and j3 contains 2 gallons. 
+
+Besides calling (2,4,2) a state, we can also call it a point in the space of
+all possible states. We can think of this space as a subset of points in
+3-dimensional space: first, it includes only those points whose coordinates are
+integers; second the sum of the values of the coordinates must be 8 (since
+water is conserved). Together, these points specify all possible states for the
+JUGS and are collectively called the STATE-SPACE of the problem. 
+
+We also specified a START and STOP state (point in state-space): in the
+problem above, the start state is (0,0,8) and the stop state is (0,4,4).
+Sometimes we want to allow more than one stop state: in such cases we can
+either specify them individually as a set, or via a boolean function:
+isStopState takes a state as a parameter and returns whether or not it is a
+stop state.
+
+Finally, we described OPERATORS that we can apply to any state, each of which
+transforms one state into another state (or think of an operator moving us from
+one point to another in the state-space). We saw that the "pour j3 into j1"
+operator, when applied to state (0,0,8) transforms it into state (3,0,5).
+Likewise, if we applied the "pour j3 into j1" operator to state (2,3,3) it
+would transform it to the state (3,3,2), because j1 already holds 2 gallons
+and can hold a maximum of 3 gallons, so j3 is reduced by exactly 1 gallon.
+
+Generally, a solution to a state-space search problem is a sequence of
+operators that transforms the start state into the stop state by applying
+one operator at a time, hopping from state to state (point to point in
+state-space) in the order specified by the sequence.
+
+
+Solving a State-Space problem as Tree Searching:
+
+We will label every node in a tree with some state, and label every edge from a
+parent to a child with an operator that transforms the parent state into the
+child state.
+
+Picture the start state as the root of a tree. Each node (including the root)
+has a child for each operator. The state at the child is the state resulting
+from the operator tranforming the parent state into the child state. So, the
+solution to a state-space problem is a path from the root of the tree downward
+to the stop state: the result of applying that sequence of operators on the
+start state, leading to the stop state.
+
+Again, we use the term "combinatorial searching" to characterize this approach
+to solving these problems, because we search through all possible combinations
+of operators. If we drew out complete search trees, we would generate a
+tremendous number of nodes (this is called the "combinatorial explosion"). If
+the tree represents the result of C operators for each node/state, and it
+takes N operators to solve the problem (the stop state is at a depth of N) the
+tree can  have up to C^N nodes at depth N. So even if C is small, say 2, a
+problem that requires 10 operators can lead to a search tree with 1,000 leaf
+nodes; a problem requiring a solution with twice as many operators (20) can
+lead to a search tree with 1,000,000 leaf nodes.
+
+So, in the case of the water jugs problem above. The root of the tree is the
+start state (0,0,8). There are 6 operators available at each state: j1->j2
+(which abbreviates "pour j1 into j2"), j2->j1, j1->j3, j3->j1, j2->j3, and
+j3->j2; note that for each operators ja->jb there is also the reverse operator
+jb->ja, so there are always an even number of operators.
+
+So, we will show all the states at depth 1 reachable from the start state (at
+depth 0) by applying one operator as
+				(0,0,8)
+      /             /           /          \             \           \
+   j1->j2       j2->j1       j1->j3      j3->j1        j2->j3       j3->j2  
+  (0,0,8)       (0,0,8)      (0,0,8)     (3,0,5)       (0,0,8)     (0,5,3)
+
+Now, the searching algorithm implemented in code at the end of this lecture
+keeps track of which states have already been reached (think of this for now
+as a set; it is really a map where the value associated with each reached state
+is the sequence of operators it takes to get there, where the sequence is empty
+for the root). Lots of operators, when applied to this start state, transform
+the start state into the same start state (pouring from j1 to j2 does nothing
+because j1 has not water in it) so we don't have to continue exploring the
+subtrees of those states: only the operators labelled j3->j1 and j3->j2 change
+the state. For simplicity we will redraw the tree below, omitting any node
+whose state is the same as the start (root's) state.
+
+				   (0,0,8)
+                    /                                    \
+                 j3->j1                                j3->j2  
+                (3,0,5)                                (0,5,3)
+
+So, we can get to the new states (3,0,5) and (0,5,3) from the start state by
+applying one operator.
+
+Next, we will show all the states at depth 2 reachable from the new states (at
+depth 1) by applying one operator. Here again we don't show any operators that
+lead to states that are already in the tree.
+
+				   (0,0,8)
+                    /                                    \
+                 j3->j1                                j3->j2  
+                (3,0,5)                                (0,5,3)
+           /              \                               |
+        j1->j2           j3->j2p                       j2->j1
+        (0,3,5)          (3,5,0)                       (3,2,3)
+
+Note in the subtree of the (3,0,5) node, j2->j1 transforms to (3,0,5) which is
+the same as its parent state (because j2 is empty); j1->j3 transforms to(0,0,8)
+which we already saw at depth 0; j3->j1 transforms to (3,0,5) which is the same
+as its parent state (because j1 is already filled); j2->j3 is (3,0,5) which is
+the same as its parent state (because j2 is empty). So only j1->j2 and j3->j2
+transform the parent node (3,0,5) to a state tht does not already label a node
+in the tree.
+
+We can likewise discover that only j2->j1 transforms the parent node (0,5,3) to
+a state that does not already label a node in the tree: j3->j2 in the right
+subtree transforms (0,5,3) to (3,5,0) which already is the leftmost node at
+depth 2
+
+So, we can get to the new states (0,3,5), (3,5,0), and (3,2,3) from the start
+state by applying two operators.
+
+Next, we will show all the states at depth 3 reachable from the new states (at
+depth 2) by applying one operator. Here again we don't show any operators that
+lead to states that are already in the tree.
+
+				   (0,0,8)
+                    /                                    \
+                 j3->j1                                j3->j2  
+                (3,0,5)                                (0,5,3)
+           /              \                               |
+        j1->j2           j3->j2p                       j2->j1
+        (0,3,5)          (3,5,0)                       (3,2,3)
+          |                                               |
+        j3->j1     no operators lead to                j1->j3           
+        (3,3,2)  any new states: noltans               (0,2,6)
+
+So, we can get to the new states (3,3,2) and (0,2,6) from the start state by
+applying three operators.
+
+Next, we will show all the states at depth 4 reachable from the new states (at
+depth 3) by applying one operator. Here again we don't show any operators that
+lead to states that are already in the tree.
+
+				   (0,0,8)
+                    /                                    \
+                 j3->j1                                j3->j2  
+                (3,0,5)                                (0,5,3)
+           /              \                               |
+        j1->j2           j3->j2p                       j2->j1
+        (0,3,5)          (3,5,0)                       (3,2,3)
+          |                                               |
+        j3->j1      no operators lead                  j1->j3           
+        (3,3,2)     to any new states                  (0,2,6)
+          |                                               |
+        j1->j2                                         j2->j1
+        (1,5,2)                                        (2,0,6)
+
+So, we can get to the new states (1,5,2) and (2,0,6) from the start state by
+applying four operators.
+
+Next, we will show all the states at depth 5 reachable from the new states (at
+depth 4) by applying one operator. Here again we don't show any operators that
+lead to states that are already in the tree.
+
+				   (0,0,8)
+                    /                                    \
+                 j3->j1                                j3->j2  
+                (3,0,5)                                (0,5,3)
+           /              \                               |
+        j1->j2           j3->j2p                       j2->j1
+        (0,3,5)          (3,5,0)                       (3,2,3)
+          |                                               |
+        j3->j1      no operators lead                  j1->j3           
+        (3,3,2)     to any new states                  (0,2,6)
+          |                                               |
+        j1->j2                                         j2->j1
+        (1,5,2)                                        (2,0,6)
+       /      \                                           |
+    j1->j3   j2->j3                                    j3->j2    
+   (0,5,3)  (1,0,7)                                    (2,5,1)
+
+So, we can get to the new states (0,5,3), (1,0,7), and (2,5,1) from the start
+state by applying five operators.
+
+Next, we will show all the states at depth 6 reachable from the new states (at
+depth 5) by applying one operator. Here again we don't show any operators that
+lead to states that are already in the tree.
+
+				   (0,0,8)
+                    /                                    \
+                 j3->j1                                j3->j2  
+                (3,0,5)                                (0,5,3)
+           /              \                               |
+        j1->j2           j3->j2p                       j2->j1
+        (0,3,5)          (3,5,0)                       (3,2,3)
+          |                                               |
+        j3->j1      no operators lead                  j1->j3           
+        (3,3,2)     to any new states                  (0,2,6)
+          |           (noltans)                           |
+        j1->j2                                         j2->j1
+        (1,5,2)                                        (2,0,6)
+      /        \                                          |
+   j1->j3    j2->j3                                   j3->j2    
+  (0,5,3)   (1,0,7)                                   (2,5,1)
+               |                                         |
+  noltans   j1->j2                                    j2->j1   
+            (0,1,7)                                   (3,4,1)  
+
+So, we can get to the new states (0,1,7) and (3,4,1) from the start state by
+applying six operators.
+
+Next, we will show all the states at depth 7 reachable from the new states (at
+depth 6) by applying one operator as. Here we don't show any operators that
+lead to states that are already in the tree.
+
+				   (0,0,8)
+                    /                                    \
+                 j3->j1                                j3->j2  
+                (3,0,5)                                (0,5,3)
+           /              \                               |
+        j1->j2           j3->j2p                       j2->j1
+        (0,3,5)          (3,5,0)                       (3,2,3)
+          |                                               |
+        j3->j1      no operators lead                  j1->j3           
+        (3,3,2)     to any new states                  (0,2,6)
+          |           (noltans)                           |
+        j1->j2                                         j2->j1
+        (1,5,2)                                        (2,0,6)
+      /        \                                          |
+   j1->j3    j2->j3                                    j3->j2    
+  (0,5,3)   (1,0,7)                                    (2,5,1)
+               |                                          |
+  noltans   j1->j2                                     j2->j1   
+            (0,1,7)                                    (3,4,1)  
+               |                                         |
+            j3->j1                                     j1->j3
+            (3,1,4)                                    (0,4,4)
+
+So, we can get to the new states (3,1,4) and (0,4,4) from the start state by
+applying seven operators.
+
+But (0,4,4) is the stop state! We have solved the problem as illustrated below
+(this output is what my program produces, listing all the operators from the
+root to the solution leaft in order (and showing the state at every depth).
+
+  Jugs[0,0,8]: Starting State
+  Jugs[0,5,3]: Transfer from jug 3 to jug 2
+  Jugs[3,2,3]: Transfer from jug 2 to jug 1
+  Jugs[0,2,6]: Transfer from jug 1 to jug 3
+  Jugs[2,0,6]: Transfer from jug 2 to jug 1
+  Jugs[2,5,1]: Transfer from jug 3 to jug 2
+  Jugs[3,4,1]: Transfer from jug 2 to jug 1
+  Jugs[0,4,4]: Transfer from jug 1 to jug 3
+  Jugs[0,4,4]: Final State
+
+So, by doing a breadth-first search of the tree, we examined all the states we
+could reach by applying 1 operator, then by applying 2 operators, etc. until we
+reached the stop state. Thus, if a solution exist we will always find the
+shortest sequence of operators that lead to it (before examining any nodes at
+depth n, we have examined all nodes at depth n-1).
+
+We use a queue to perform this breadth-first search. Initially we add the start
+state to the queue, and whenever we remove a state from the queue, we apply
+all the operators to it (generating more states) and put those states back in
+the queue (if we have not already put them in the queue: every state that is
+added to the queue also is put into a map -its associated value is the sequence
+of operators that were applied to the start state to get to the key state-
+which we can get to see if it is present.
+
+If a solution doesn't exist at all (imagine what would happen if the stop state
+were (0,4,5)) this process would eventually lead to leaf nodes that are all
+labelled noltans: operators transform their states only to states already in
+the tree, so there are no new states to examine, and the program realizes
+there is no solution. Because the state-space is finite, this process will
+eventually yield and answer or realize that no answer is possible.
+
+
+The 15s Puzzle:
+
+Another problem solvable by state-space searching is the 15s puzzle (really
+a generalization of the N^2-1 puzzle). The puzzle's state is given by a 4x4
+matrix, in which the numbers 1-15 appear on tiles, with one square "empty".
+For example
+     0   1   2   3
+   +---+---+---+---+
+ 0 | 5 | 3 | 1 | 2 |
+   +---+---+---+---+
+ 1 | 15| 8 | 12| 14|
+   +---+---+---+---+
+ 2 | 6 | 7 |   | 9 |
+   +---+---+---+---+
+ 3 | 4 | 13| 11| 10|
+   +---+---+---+---+
+
+There are four operators:
+  1) move the tile above the empty square down
+  2) move the tile below the empty square up
+  3) move the tile to the right of the empty square to the left
+  4) move the tile to the left of the empty square to the right
+
+An easier way to think about these four operations as to move the empty
+square up, down, to the left, and to the right.
+
+So, given a start and stop state (two matrices), a solution to the problem is
+the sequence of operators (chosen from these four) needed to transform the
+start state into the stop state.
+
+
+As a quick side note, let's examine how many states there are in the search
+space for the 15s puzzle and use big-O and big-Omega notation to bound this
+number by simpler functions both from above and below.
+
+There are 16! different possible states. First let's look at an upper bound
+for n! using big-O notation.
+
+n! = 1 x 2 x 3 x ... x n-1 x n; if we replace each value by a bigger one, n,
+n! < n^n; this isn't a great (tight) upper bound (it is way too big) but it is
+an upper bound so n! is O(n^n)
+
+note 16^16 = (2^4)^16 = 2^64 = 2^4 x (2^10)^6 ~ 16 x (10^3)^6 = 16x10^18
+
+Next let's look at a lower bound for n! using big-Omega notation.
+
+n! = 1 x 2 x 3 x ... n/2 x n/2+1 x ... x n
+
+  1) replace the first n/2 terms by a smaller number: 2
+    (OK, so 2 isn't smaller than 1, but so long as n>8, the product of the
+     first 1/2 of the terms is bigger than 2^(n/2) because 4 is 2^2)
+  2) replace the last n/2 terms by a smaller number: n/2
+
+n! > 2^(n/2) x (n/2)^(n/2) = (2*n/2)^(n/2) = n^(n/2) = (n^n)^(1/2) = sqrt(n^n)
+so n! is Omega(sqrt(n^n))
+
+note thatr when n is 16, sqrt (n^n) ~ sqrt (16x10^18) = 4x10^9
+
+so 4x10^9 < n! < 16x10^18
+
+The bigger approximation is bigger by a factor of 4 billion than the smaller
+approximation, so the bounds here are not very tight. The actual value of 16!
+is about 2.1x 10^13 (about the square root of the product of these two
+approximations).
+
+Stirlings formula for approximating n!, which is very accurate for large n, has
+n! ~ sqrt(2*pi*n)*(n/e)^n.
+
+Rubik's cube is another problem that is solvable by state-space search (but
+with many more operations and a much larger state-space).
+
+
+Best-First Search:
+
+Best-First search is another way to search a state-space tree. The goal of this
+form of search is to find a good solution (maybe not the optimal one found by
+breadth first searching), but by examining fewer nodes (applying fewer
+operators throughout the searching process).
+
+To implement best-first searching we need a simple but rough way to determine
+which of two states is "closer" to the stop state: a closer state would require
+fewer operators to transform it into the stop state. If we could perfectly
+compute this information, we could always find an optimal length sequence of
+operators with no real searching, by (a) applying all operators to the start
+state and finding the new state closest to the stop state; (b) applying all
+operators to that new state and finding a newer state closest to the stop
+state, ... and continuing until we reach the stop state.
+
+But it is very hard in practice to compute how close a state really is to the 
+stop state (without actually doing a breadth-first search from that state to
+the stop state; that would defeat the whole purpose of best-first searching
+because the closeness function itself would require extensive searching).
+So, we will always end up with a simple closeness method that is very
+appoximate.
+
+In the water jugs problem, we can approximate closeness to a solution in two
+simple ways. In the first, we compute how close a state is to the stop state
+by computing  the sum of the absolute values of the differences between the
+amount of water in a jug and the amount that is supposed to be there. Like all
+closeness methods, the answer should be non-negative, with 0 at the stop state
+itself, and bigger numbers otherwise (think of it as a "distance" to the
+solution; then the closesness function -how close is state A to state B- is
+also called a "metric").
+
+So, if the current state is (2,5,1) and the stop state is (0,4,4), we'd compute
+this metric as |2-0| + |5-4| + |1-4| = 6.
+
+We can us and even simpler metric to compute how close a state is to the stop
+state, by computing the sum of a "chracteristic function" for each jug: 0 if
+it contains the right amount of water, 1 if it doesn't. This just computes how
+many jugs contain the incorrect amount of water. Note that these metrics are
+easily extendable to problems with any number of jugs.
+
+Once we have such a metric, we can create a priority queue for all the examined
+states, such that the highest priority state is the one that is closest to the
+stop state. As before, we use our operators to determine which states to add
+to this priority queue, but when we remove a state to examine next, it is
+whatever state that is closest (by our approximation) to the stop state. The
+algorithm is the same as breadth-first searching, but using a priority queue,
+instead of a straight queue, means we examine states in a different order.
+
+It might seem like the first metric would be better because it is more
+detailed, but at least for the one water jug problem I ran my code on (see the
+next section), the second metric was better. The problem was using jugs with
+sizes 5, 11, 13, and 24; a start state of (0,0,0,24); and a stop state of
+(0,8,8,8)
+
+When solving the problem in ApplicationNoFillNoEmpty (where water is conserved)
+the breadth-first solution is found after examining 889 nodes, and has a
+solution length of 6 (a sequence of 6 operators solves the problem).
+
+The best-first solution is found using the first metric after examining 413
+nodes, but its solution length is 15. So, it runs about twice as fast but finds
+a solution that is over two times a long.
+
+Using the second metric, the best-first solution is found after examining 101
+nodes, and its solution length is 9. So, it runs about 9 times as fast but
+finds a solution that is 50% longer.
+
+
+One General Algorithm to solve Breadth-First and Best-First Searching:
+
+There is a rather compact algorithm for implementing general state-space
+searching. We start by getting from the problem the "start" state, the "stop"
+state, and a set of all the "operators" that can be applied to get from one
+state in the problem to another state in the problem, adding the "start" state
+into the previously empty "exploring" collection.
+
+Generally, each loop removes from the "exploring" collection (it is a queue for
+breadth-first search and a priority queue for best-first search) the next state
+to explore when trying to find a solution. One by one we apply all known
+operators to this state to generate all the other states that we can reach from
+it; for each new state (that we have not already reached; we check whether the
+new state is already in the solutions map), we check whether it is a solution
+(is the "stop" state) and if so, return the operators needed to reach it;
+otherwise we put how to reach that state (the list of operators need to get to
+that state from the "start" state) in solutions and add that state to the
+"exploring" collection.
+
+Eventually we will have found/returned a solution or "exploring" will be empty
+(there are no more new states to explore: we've already reached every state that
+is reachable) and we will return a "null" reference (signalling there is no list
+of operators allowing us to reach the "stop" state from the "start" state.
+
+
+  public static List<Problem.Operator> solveIt (Problem problem, OrderedCollection<Problem.State> exploring) { 
+    int operatorCount   = 0;
+    Problem.State start = problem.getStartState();
+    Problem.State stop  = problem.getStopState();
+    Set<Problem.Operator> operators = problem.getAllOperators();
+
+    Map<Problem.State,List<Problem.Operator>> solutions = new ArrayMap<Problem.State,List<Problem.Operator>>();          //state -> List[Operator]
+
+    exploring.add(start);
+    solutions.put(start,new ArrayList<Problem.Operator>());   //start state -> no operations
+
+    while(!exploring.isEmpty()) {
+      Problem.State          currentState    = exploring.remove();           //state to explore next
+      List<Problem.Operator> currentSolution = solutions.get(currentState);  //operators to get to this state
+
+      for (Problem.Operator op : operators) {
+        operatorCount++;
+
+        try {
+          Problem.State newState = op.apply(currentState);
+          
+          if (!solutions.containsKey(newState)) {
+            //extend solution to include this operator
+            List<Problem.Operator> newSolution = (List<Problem.Operator>)currentSolution.shallowCopy();
+            newSolution.add(op);
+
+            //if stop state, return solution
+            if (newState.equals(stop)) {
+              System.out.println("Operator applications = " + operatorCount);
+              return newSolution;
+            }
+
+            //update solutions/exploring
+            solutions.put(newState, newSolution);
+            exploring.add(newState);
+          }
+        } catch (IllegalStateException e) {
+          //Just apply next operator if this one fails to work; i.e., skip it
+        }
+
+      } 
+    }
+
+    //Failed to find solution
+    return null;
+  }
+
+On the page that lists sample programs, there is a download for "State Space
+Search" which include a few classes comprising this general problem solver,
+as well as  classes to represent and Ns puzzle and the Water Jugs problem.
+When run, the application prints all the operators and then performs both a
+breadth-first and best-first search for a solution, printing both the number
+of nodes explored and the solution. As we discussed, breadth-first searching
+will typically explore more nodes but come up with a shorter solution than
+best-first searching.
+
+Here is the actual code that calls solveIt for each kind of search. Note that
+you can speed-up best-first searching by using a HeapPriorityQueue instead of
+an ArrayPriorityQueue. The closenessMetric parameter determines which of two
+states is closer to the stop state.
+
+  //Use breadth-first searching to find an "optimal" solution (the one
+  //  with the minimum number of operators needed to transform the initial
+  //  state to the final state.
+  public static List<Problem.Operator> breadthFirstSolution (Problem problem) {
+    return solveIt(problem, new ArrayQueue<Problem.State>());
+  }
+
+  
+  //Use the closenessMetric to try to find a solution faster (look at fewer
+  //  internal states), but possibly not an optimal solution.
+  public static List<Problem.Operator>
+     bestFirstSolution (Problem problem,
+                        Comparator<Problem.State> closenessMetric) {
+    return solveIt(problem, new ArrayPriorityQueue<Problem.State>(closenessMetric));
+  }
+

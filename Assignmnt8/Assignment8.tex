@@ -1,0 +1,106 @@
+\documentclass[5pt]{article}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{listings}
+\usepackage{graphicx}
+\graphicspath{{/Users/diesel/Desktop/}}
+\newcommand{\floor}[1]{\lfloor #1 \rfloor}
+
+\title{Solution to Homework Assignment 8(CS 430)}
+\author{Saptarshi Chatterjee \\
+\texttt{CWID: A20413922}
+}
+
+\begin{document}
+\maketitle
+
+
+\section{Question 1. Problem 34.4-3 on page 1085}
+
+\setlength{\parskip}{1.2em}
+\setlength{\parindent}{0em}
+
+\textbf{Answer -}
+
+Lets say 3-CNF-SAT formula have x variables , then, the truth table corresponding
+to this formula would have $2^x$ combinations.  The reduction step needs to
+consider every possible values to all the variables. This then means that
+the reduction process will need to iterate over all the rows of the Truth table , so complexity 
+will be O($2^x$) . Hence, we can conclude that this strategy does not yield a polynomial-time reduction.
+
+
+\section{Question 2.  Problem 34.4-7 on page 1086}
+
+\setlength{\parskip}{1.2em}
+\setlength{\parindent}{0em}
+
+\textbf{Answer -}
+
+\begin{itemize}
+\item We will create a Graph where vertexes are variable v and $\neg {v}$
+\item  We will draw an Edge ($\alpha,\beta$) iff there exists a clause in the 2-CNF-SAT as ($\neg\alpha\lor\beta$)
+\item So, If there's an edge ($\alpha,\beta$) then there must be an edge ($\neg\alpha,\neg\beta$)
+\item The 2-CNF formula  will be unsatisfiable if and only if there exists a variable v, such that there is a path from  (v and $\neg {v}$) and ($\neg {v}$ and v)
+
+~~\\Proof:  Suppose there are path(s) (v and $\neg {v}$) and ($\neg {v}$ and v) and there exists a satisfying assignment for the 2-CNF-SAT
+
+Case1: Let v =TRUE.
+Let there be a path in the graph  be  $v  ....  \rightarrow \alpha  \rightarrow \beta \rightarrow .... \rightarrow \neg {v} $. The way we constructed the graph, there is an edge between (M,N)  iff there is a clause ($\neg M \lor N$). 
+An edge from M to N represents that if M is TRUE, then N must be TRUE (for the clause to be TRUE). Now since v is true, all literals in path from ( v to $\alpha$ )must be TRUE. And all literals in the path from ($ \beta
+to \neg {v}$ ) must be FALSE. This results in an edge between ($\alpha$ ,$\beta$) where $\alpha$ = TRUE and $\beta$ = FALSE. So   ($\neg\alpha \lor \beta$) becomes FALSE, contradicting our assumption
+that there exists a satisfying assignment.
+Case2: Let v = FALSE. similar as above
+
+\item So if there is no such edge , here is we can assign boolean value -
+\\a) pick an unassigned vertex and assign it T
+\\b) Assign T to all reachable vertices
+\\c) Assign F to their negations
+\\d) Repeat until all vertices are assigned
+
+\item So following algo can determine if $2-CNF-SAT \in P$
+\\a) For each variable v find if there is a path from v to $\neg v$ and vice-versa.
+\\b)  Reject if any of these tests succeeded.
+\\c)  Accept otherwise
+\\ Complexity of this Algo is O(n) so $2-CNF-SAT \in P$
+\end{itemize}
+
+
+
+\section{Question 3.a Prove that in any legal 3-coloring of the crossover gadget, the opposite corners are forced to have
+the same color 3.b Prove that any assignment of colors to the corners such that opposite corners have the same color
+extends to a legal 3-coloring of the entire crossover gadget .  3.c Use the following idea to prove that 3-colorability of planar graphs is NP-hard: Replace each point
+at which another edge crosses edge (u, v) with a copy of the crossover gadget G.  }
+
+\setlength{\parskip}{1.2em}
+\setlength{\parindent}{0em}
+
+\includegraphics[scale=.3]{3rd}
+\includegraphics[scale=.3]{2nd}
+
+
+
+
+
+
+
+\begin{thebibliography}{9}
+\bibitem{solution}
+CLSR Solution
+\\\\texttt{http://sites.math.rutgers.edu/~ajl213/CLRS/Ch34.pdf}
+
+\bibitem{solution}
+2-SAT Solution
+\\\\texttt{http://www.dei.unipd.it/~geppo/AA/DOCS/2SAT.pdf}
+
+\bibitem{solution}
+2-SAT IIT Solution
+\\\\texttt{https://www.iitg.ac.in/deepkesh/CS301/assignment-2/2sat.pdf}
+
+\bibitem{solution}
+3 color
+\\\\texttt{https://courses.cs.washington.edu/courses/cse431/14sp/scribes/lec15.pdf}
+
+\end{thebibliography}
+
+\end{document}
+
+
